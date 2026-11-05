@@ -15,4 +15,4 @@ jobs:
     - name: All test
       run: |
         bash -xv ./test.bash
-        bash -xv ./test_aversge.bash
+        bash -xv ./test_average.bash
