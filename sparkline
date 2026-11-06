@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 祁潤宇
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# sparkline - 標準入力から数値を読み、1行の小さなグラフにして出力する。
+
+import sys
+
+BLOCKS = "▁▂▃▄▅▆▇█"
+TOP = len(BLOCKS) - 1
+
+
+def usage():
+    print(
+        """使い方: sparkline [-h] [-l LOW] [-u HIGH]
+
+標準入力から数値を読み、1行の小さなグラフ（スパークライン）にして
+標準出力に表示します。数値1つにつき1文字を出力します。
+
+数値は改行・空白・タブのいずれかで区切ってください。
+入力の最小値が ▁、最大値が █ になるように8段階に分けます。
+すべての値が同じときは、すべて ▁ になります。
+
+オプション:
+  -l, --low LOW    グラフの下限を数値で固定する
+  -u, --high HIGH  グラフの上限を数値で固定する
+                   範囲を固定すると、複数の系列を同じ縮尺で比べられます
+
+  -h, --help       このメッセージを表示して終了する
+
+終了ステータス:
+  0  正常終了
+  1  入力が空、数値でない値がある、または引数が不正
+"""
+    )
+
+
+def die(message):
+    print("sparkline: " + message, file=sys.stderr)
+    sys.exit(1)
+
+
+def to_float(token, option):
+    try:
+        return float(token)
+    except ValueError:
+        die(option + " の値が数値ではありません: " + token)
+
+
+def parse_args(args):
+    low = None
+    high = None
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg in ("-h", "--help"):
+            usage()
+            sys.exit(0)
+        if arg in ("-l", "--low", "-u", "--high"):
+            if i + 1 >= len(args):
+                die(arg + " には数値が必要です")
+            value = to_float(args[i + 1], arg)
+            if arg in ("-l", "--low"):
+                low = value
+            else:
+                high = value
+            i += 2
+            continue
+        die("不明な引数です: " + arg + "（使い方は -h を参照）")
+    if low is not None and high is not None and low >= high:
+        die("下限が上限以上です: " + str(low) + " >= " + str(high))
+    return low, high
+
+
+def read_numbers():
+    values = []
+    for token in sys.stdin.read().split():
+        try:
+            values.append(float(token))
+        except ValueError:
+            die("数値ではありません: " + token)
+    if not values:
+        die("数値が入力されていません")
+    return values
+
+
+def render(values, low, high):
+    lo = low if low is not None else min(values)
+    hi = high if high is not None else max(values)
+    if hi < lo:
+        die("下限が入力の最大値より大きいです: " + str(lo) + " > " + str(hi))
+
+    chars = []
+    for value in values:
+        if hi == lo:
+            level = 0
+        else:
+            level = int((value - lo) / (hi - lo) * TOP)
+            if level < 0:
+                level = 0
+            if level > TOP:
+                level = TOP
+        chars.append(BLOCKS[level])
+    return "".join(chars)
+
+
+def main():
+    low, high = parse_args(sys.argv[1:])
+    values = read_numbers()
+    print(render(values, low, high))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        sys.exit(0)
