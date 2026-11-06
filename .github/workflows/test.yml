@@ -16,3 +16,4 @@ jobs:
       run: |
         bash -xv ./test.bash
         bash -xv ./test_average.bash
+        bash -xv ./test_sparkline.bash
